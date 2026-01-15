@@ -1,0 +1,447 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <map>
+#include <string>
+#include <cctype>
+
+using namespace std;
+
+// -----------------------------
+// Base Class: Person
+// -----------------------------
+class Person {
+protected:
+    string id;
+    string name;
+public:
+    Person(string i = "", string n = "") : id(i), name(n) {}
+    virtual void display() const {
+        cout << id << " - " << name << endl;
+    }
+    string getId() const { return id; }
+    string getName() const { return name; }
+};
+
+// -----------------------------
+// Derived Class: Student
+// -----------------------------
+class Student : public Person {
+public:
+    Student(string i = "", string n = "") : Person(i, n) {}
+    void display() const override {
+        cout << "Student ID: " << id << ", Name: " << name << endl;
+    }
+};
+
+// -----------------------------
+// Class: Subject
+// -----------------------------
+class Subject {
+private:
+    string name;
+public:
+    Subject(string n = "") : name(n) {}
+    string getName() const { return name; }
+};
+
+// -----------------------------
+// Class: AttendanceRecord
+// -----------------------------
+class AttendanceRecord {
+private:
+    string studentId;
+    string subjectName;
+    string date;
+    string status;
+public:
+    AttendanceRecord(string id = "", string sub = "", string d = "", string s = "")
+        : studentId(id), subjectName(sub), date(d), status(s) {}
+
+    string getStudentId() const { return studentId; }
+    string getSubjectName() const { return subjectName; }
+    string getDate() const { return date; }
+    string getStatus() const { return status; }
+};
+
+// -----------------------------
+// Attendance System
+// -----------------------------
+class AttendanceSystem {
+private:
+    vector<Student> students;
+    vector<Subject> subjects;
+    vector<AttendanceRecord> records;
+
+    void trim_newline(char *s) {
+        if (!s) return;
+        size_t len = strlen(s);
+        while (len > 0 && (s[len - 1] == '\n' || s[len - 1] == '\r')) {
+            s[len - 1] = '\0';
+            len--;
+        }
+    }
+
+public:
+    AttendanceSystem() {
+        loadStudents();
+        loadSubjects();
+        loadAttendance();
+    }
+
+    // -----------------------------
+    // Load students
+    // -----------------------------
+    void loadStudents() {
+        students.clear();
+        FILE *f = fopen("students.txt", "r");
+        if (!f) return;
+
+        char line[256];
+        while (fgets(line, sizeof(line), f)) {
+            trim_newline(line);
+            char *id = strtok(line, ",");
+            char *name = strtok(NULL, "\n");
+            if (id && name) {
+                students.emplace_back(string(id), string(name));
+            }
+        }
+        fclose(f);
+    }
+
+    // -----------------------------
+    // Load subjects
+    // -----------------------------
+    void loadSubjects() {
+        subjects.clear();
+        FILE *f = fopen("subjects.txt", "r");
+        if (!f) return;
+
+        char line[256];
+        while (fgets(line, sizeof(line), f)) {
+            trim_newline(line);
+            if (strlen(line) > 0)
+                subjects.emplace_back(string(line));
+        }
+        fclose(f);
+    }
+
+    // -----------------------------
+    // Load attendance
+    // -----------------------------
+    void loadAttendance() {
+        records.clear();
+        FILE *f = fopen("attendance.txt", "r");
+        if (!f) return;
+
+        char line[512];
+        while (fgets(line, sizeof(line), f)) {
+            trim_newline(line);
+
+            char *sid = strtok(line, ",");
+            char *sub = strtok(NULL, ",");
+            char *date = strtok(NULL, ",");
+            char *status = strtok(NULL, "\n");
+
+            if (sid && sub && date && status) {
+                records.emplace_back(string(sid), string(sub), string(date), string(status));
+            }
+        }
+        fclose(f);
+    }
+
+    // -----------------------------
+    // Add students
+    // -----------------------------
+    void addStudents() {
+        int n;
+        cout << "Enter number of students to add: ";
+        cin >> n;
+        cin.ignore();
+
+        FILE *f = fopen("students.txt", "a");
+        if (!f) {
+            cout << "Error opening students.txt\n";
+            return;
+        }
+
+        for (int i = 0; i < n; i++) {
+            string id, name;
+            cout << "Enter Student " << i + 1 << " ID: ";
+            getline(cin, id);
+            cout << "Enter Name: ";
+            getline(cin, name);
+
+            students.emplace_back(id, name);
+            fprintf(f, "%s,%s\n", id.c_str(), name.c_str());
+        }
+        fclose(f);
+
+        cout << "Students added successfully.\n";
+    }
+
+    // -----------------------------
+    // Add subjects
+    // -----------------------------
+    void addSubjects() {
+        int n;
+        cout << "Enter number of subjects: ";
+        cin >> n;
+        cin.ignore();
+
+        FILE *f = fopen("subjects.txt", "a");
+        if (!f) {
+            cout << "Error opening subjects.txt\n";
+            return;
+        }
+
+        for (int i = 0; i < n; i++) {
+            string sub;
+            cout << "Enter Subject " << i + 1 << " Name: ";
+            getline(cin, sub);
+
+            subjects.emplace_back(sub);
+            fprintf(f, "%s\n", sub.c_str());
+        }
+        fclose(f);
+
+        cout << "Subjects added successfully.\n";
+    }
+
+    // -----------------------------
+    // Mark attendance
+    // -----------------------------
+    void markAttendance() {
+        if (students.empty() || subjects.empty()) {
+            cout << "Please add students and subjects first.\n";
+            return;
+        }
+
+        string date;
+        cout << "Enter date (DD-MM-YYYY): ";
+        cin >> date;
+
+        FILE *f = fopen("attendance.txt", "a");
+        if (!f) {
+            cout << "Error opening attendance.txt\n";
+            return;
+        }
+
+        for (auto &sub : subjects) {
+            cout << "\n--- Subject: " << sub.getName() << " ---\n";
+            for (auto &st : students) {
+                char ch;
+                cout << "Is " << st.getName() << " present? (P/A): ";
+                cin >> ch;
+                string status = (ch == 'P' || ch == 'p') ? "Present" : "Absent";
+
+                records.emplace_back(st.getId(), sub.getName(), date, status);
+                fprintf(f, "%s,%s,%s,%s\n",
+                        st.getId().c_str(), sub.getName().c_str(),
+                        date.c_str(), status.c_str());
+            }
+        }
+
+        fclose(f);
+        cout << "\nAttendance marked successfully.\n";
+    }
+
+    // -----------------------------
+    // View attendance
+    // -----------------------------
+    void viewAttendance() {
+        if (records.empty()) {
+            cout << "No records to display.\n";
+            return;
+        }
+
+        cout << "\nID\tSubject\t\tDate\t\tStatus\n";
+        cout << "--------------------------------------------------\n";
+
+        for (auto &r : records) {
+            cout << r.getStudentId() << "\t"
+                 << r.getSubjectName() << "\t"
+                 << r.getDate() << "\t"
+                 << r.getStatus() << "\n";
+        }
+    }
+
+    // -----------------------------
+    // ✅ Fixed Update Attendance
+    // -----------------------------
+    void updateAttendance() {
+        string id, sub, date, newStatus;
+
+        cin.ignore(); // clear newline from buffer
+        cout << "\n===== Update Attendance =====\n";
+        cout << "Enter Student ID: ";
+        getline(cin, id);
+        cout << "Enter Subject Name: ";
+        getline(cin, sub);
+        cout << "Enter Date (DD-MM-YYYY): ";
+        getline(cin, date);
+        cout << "Enter new status (Present/Absent): ";
+        getline(cin, newStatus);
+
+        // Normalize input
+        for (auto &c : newStatus) c = tolower(c);
+        if (newStatus == "p" || newStatus == "present")
+            newStatus = "Present";
+        else
+            newStatus = "Absent";
+
+        bool found = false;
+
+        for (auto &r : records) {
+            if (r.getStudentId() == id &&
+                r.getSubjectName() == sub &&
+                r.getDate() == date)
+            {
+                r = AttendanceRecord(id, sub, date, newStatus);
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            cout << "⚠️ Record not found! Check ID, Subject, or Date.\n";
+            return;
+        }
+
+        FILE *f = fopen("attendance.txt", "w");
+        if (!f) {
+            cout << "Error opening attendance.txt\n";
+            return;
+        }
+
+        for (auto &r : records) {
+            fprintf(f, "%s,%s,%s,%s\n",
+                    r.getStudentId().c_str(),
+                    r.getSubjectName().c_str(),
+                    r.getDate().c_str(),
+                    r.getStatus().c_str());
+        }
+        fclose(f);
+
+        loadAttendance(); // refresh data
+        cout << "✅ Attendance updated successfully!\n";
+    }
+
+    // -----------------------------
+    // Subject-wise average
+    // -----------------------------
+    void viewSubjectAverage() {
+        if (subjects.empty()) {
+            cout << "No subjects available.\n";
+            return;
+        }
+
+        cout << "\nSubjects:\n";
+        for (size_t i = 0; i < subjects.size(); i++)
+            cout << i + 1 << ". " << subjects[i].getName() << "\n";
+
+        int choice;
+        cout << "Select subject number: ";
+        cin >> choice;
+
+        if (choice < 1 || choice > (int)subjects.size()) {
+            cout << "Invalid choice.\n";
+            return;
+        }
+
+        string sub = subjects[choice - 1].getName();
+        map<string, pair<int, int>> stats;
+
+        for (auto &r : records) {
+            if (r.getSubjectName() == sub) {
+                stats[r.getStudentId()].second++;
+                if (r.getStatus() == "Present")
+                    stats[r.getStudentId()].first++;
+            }
+        }
+
+        cout << "\nAverage Attendance for Subject: " << sub << "\n";
+        cout << "------------------------------------\n";
+
+        for (auto &s : students) {
+            auto it = stats.find(s.getId());
+            if (it != stats.end()) {
+                double avg = (double)it->second.first * 100.0 / it->second.second;
+                printf("%s (%s) -> %.1f%% Present\n",
+                       s.getId().c_str(), s.getName().c_str(), avg);
+            } else {
+                cout << s.getId() << " (" << s.getName() << ") -> No records\n";
+            }
+        }
+    }
+
+    // -----------------------------
+    // Student-wise average
+    // -----------------------------
+    void viewStudentWiseAverage() {
+        if (records.empty()) {
+            cout << "No attendance records available.\n";
+            return;
+        }
+
+        map<string, pair<int,int>> stats;
+
+        for (auto &r : records) {
+            stats[r.getStudentId()].second++;
+            if (r.getStatus() == "Present")
+                stats[r.getStudentId()].first++;
+        }
+
+        cout << "\n===== Student-wise Attendance Average =====\n";
+
+        for (auto &s : students) {
+            auto it = stats.find(s.getId());
+            if (it != stats.end()) {
+                double avg = (double)it->second.first * 100.0 / it->second.second;
+                printf("%s (%s) -> %.1f%% Present (%d/%d)\n",
+                       s.getId().c_str(), s.getName().c_str(), avg,
+                       it->second.first, it->second.second);
+            } else {
+                cout << s.getId() << " (" << s.getName() << ") -> No data\n";
+            }
+        }
+    }
+};
+
+
+// -----------------------------
+// MAIN
+// -----------------------------
+int main() {
+    AttendanceSystem system;
+    int choice;
+
+    do {
+        cout << "\n===== STUDENT ATTENDANCE SYSTEM =====\n";
+        cout << "1. Add Students (Batch)\n";
+        cout << "2. Add Subjects\n";
+        cout << "3. Mark Attendance\n";
+        cout << "4. View Attendance Records\n";
+        cout << "5. Update Attendance\n";
+        cout << "6. View Subject-wise Average\n";
+        cout << "7. View Student-wise Average\n";
+        cout << "8. Exit\n";
+        cout << "Enter choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1: system.addStudents(); break;
+            case 2: system.addSubjects(); break;
+            case 3: system.markAttendance(); break;
+            case 4: system.viewAttendance(); break;
+            case 5: system.updateAttendance(); break;
+            case 6: system.viewSubjectAverage(); break;
+            case 7: system.viewStudentWiseAverage(); break;
+            case 8: cout << "Exiting...\n"; break;
+            default: cout << "Invalid choice. Try again.\n";
+        }
+    } while (choice != 8);
+
+    return 0;
+}
