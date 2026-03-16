@@ -1,0 +1,23 @@
+# Compiled binaries
+attendance_system
+*.exe
+*.out
+*.o
+
+# Build artifacts
+*.d
+
+# Data files (optional — remove these lines if you want to track sample data)
+students.txt
+subjects.txt
+attendance.txt
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.vscode/
+.idea/
+*.swp
+*~
